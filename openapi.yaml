@@ -1,0 +1,124 @@
+openapi: "3.0.0"
+info:
+  title: Fetch account information
+  version: 1.0.0
+security:
+  - almbrand: [openid]
+paths:
+  /accounts:
+    get:
+      operationId: listAccounts
+      summary: List accounts
+      responses:
+        '401':
+          description: Missing or invalid authentication.
+        '200':
+          description: Lists the accounts associated to the authenticated user.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Account'
+  /accounts/{accountId}/transactions:
+    get:
+      operationId: listAccountTransactions
+      summary: Lists up to 100 of the most recent transactions on the account.
+      parameters:
+        - in: path
+          name: accountId
+          required: true
+          schema:
+            type: string
+          description: Full registration and account numbers (including leading zeros) concatenated with a '-'.
+          example: Eg. 0432-0002834521
+      responses:
+        '401':
+          description: Missing or invalid authentication.
+        '200':
+          description: Successfully fetched up to 100 transactions.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Transaction'
+
+
+components:
+  securitySchemes:
+    almbrand:
+      type: openIdConnect
+      openIdConnectUrl: https://test-auth-gw.almbrand.dk/oidc/.well-known/openid-configuration
+  schemas:
+    Account:
+      type: object
+      properties:
+        iban:
+          type: string
+          description: International bank account number for the account.
+        country:
+          type: string
+          description: ISO 3166-1 alpha-2 (2-letter) contry code for the country of origin of the account.
+        name:
+          type: string
+          description: Human friendly name for the account.
+        regNr:
+          type: string
+          description: Registration number (bank code) for the account. Only returned for danish accounts.
+        accountNr:
+          type: string
+          description: Account number for the account. Only returned for danish accounts.
+        currency:
+          type: string
+          description: The ISO 4217 currency code of the account.
+        balance:
+          $ref: '#/components/schemas/Money'
+        reserved:
+          $ref: '#/components/schemas/Money'
+        allowedOverdraftMax:
+          $ref: '#/components/schemas/Money'
+        overdraftFacilityMax:
+          $ref: '#/components/schemas/Money'
+        permissions:
+          $ref: '#/components/schemas/Permissions'
+      required:
+        - iban
+        - name
+        - currency
+        - balance
+        - permissions
+    Permissions:
+      type: object
+      description: The permissions the current user holds wrt. the fetched account.
+      properties:
+        isQueryAllowed:
+          type: boolean
+          description: Is the user authorized to get balance information and get transactions.
+        isWithdrawalAllowed:
+          type: boolean
+          description: Is the user authorized to withdraw money from the account.
+        isDepositAllowed:
+          type: boolean
+          description: Is the user authorized to deposit money into the account.
+    Money:
+      type: object
+      properties:
+        amount:
+          type: number
+          description: Amount of money represented by this Money with two decimal place precision.
+        currency:
+          type: string
+          description: The ISO 4217 currency code of the Amount.
+    Transaction:
+      type: object
+      properties:
+        transactionId:
+          type: string
+          description: Id of the transaction. Formatted as a timestamp, but used as a string identifier.
+        date:
+          type: string
+          description: The date the transaction was booked in yyyyMMdd format.
+        amount:
+          type: number
+          description: The amount of money transferred in the transaction.
